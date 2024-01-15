@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment           #Creamos un deploy
+metadata:
+  name: deploy-httpd
+  namespace: hacktone1
+  labels:
+    app: httpd-app
+    service: httpd-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpd-app
+      service: httpd-service
+  template:
+    metadata:
+      labels:
+        app: httpd-app
+        service: httpd-service
+    spec:
+      containers:
+        - name: apache-pod
+          image: php:7.4-apache #Una imagen que tenga el PHP con Apache incluido.
+          env:
+            - name: IP_POD      # Creamos una env con el nombre IP_POD y sacamos la IP del estado del POD
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: Nombre_POD  # Creamos una env con el nombre Nombre_POD para sacar su nombre
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 80
+          volumeMounts:
+             - name: httpd-vol1
+               mountPath: /var/www/html/
+      volumes:
+        - name: httpd-vol1
+          configMap:
+            name: httpd-configmap
+            defaultMode: 0777
+          
+---
+apiVersion: v1 
+kind: Service               #Se crea el Servicio tipo NodePort.
+metadata:
+  name: service-httpd
+  namespace: hacktone1
+  labels:                   # Le damos los mismos labels para que vaya a este servicio y lo identifique.
+    app: httpd-app
+    service: httpd-service
+spec:
+  type: NodePort
+  selector:
+    app: httpd-app
+    service: httpd-service
+  ports:
+    - name: httpd-service
+      protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30008
+---
+apiVersion: v1
+kind: ConfigMap         #Creamos el configmap
+metadata:
+  name: httpd-configmap
+  namespace: hacktone1
+data:
+  index.php: |
+    <!DOCTYPE html>
+    <html>
+    <body>
+    <h1>Mi dirección IP del Pod</h1>
+    <!-- Inicio del script PHP -->
+    <?php
+    // Sacar la IP del Pod que lo extraye del env ENV del POD
+    $ip_address = getenv('IP_POD');
+    // Sacar Nombre del Pod de la ENV del POD con el nombre Nombre_POD
+    $pod_name = getenv('Nombre_POD');
+    // Imprime la dirección IP y el nombre del pod
+    echo "<p>IP del Pod: $ip_address</p>";
+    echo "<p>Nombre del Pod: $pod_name</p>";
+    ?>
+    <!-- Fin del script PHP -->
+    </body>
+    </html>
