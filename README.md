@@ -1,6 +1,10 @@
 # hacktonecaso1
 kubectl apply -f fichero.yml
+
+
 kubectl get pods -n hacktone1
+
+
 kubectl get svc -n hacktone1
 
 Comprobamos el pod/servicio creado en el namespace hacktone1:
